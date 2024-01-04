@@ -22,9 +22,7 @@ class Product(models.Model):
     category = models.ForeignKey(Category, on_delete=models.CASCADE)    
     marked_price = models.PositiveIntegerField()
     selling_price = models.PositiveIntegerField()
-    description = models.TextField()
-    warranty = models.CharField(max_length=300, null=True, blank=True)
-    return_policy =  models.CharField(max_length=300, null=True, blank=True)
+    description = models.TextField()   
     view_count = models.PositiveBigIntegerField(default=0)
 
 

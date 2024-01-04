@@ -24,21 +24,11 @@ class UserDetailsView(APIView):
     permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        #  app_user = request.user.appuser
-        #  serializer = AppUserSerializer(app_user)
-        #  return Response(serializer.data)
+        
         app_user = AppUser.objects.get(user=request.user)
         serializer = CombinedSerializer(app_user)
         return Response(serializer.data)
-        # if request.user.is_authenticated:
-        #     try:
-        #         my_user = User.objects.get(user=request.user)
-        #         serializer = UserSerializer(my_user)
-        #         return Response(serializer.data)
-        #     except User.DoesNotExist:
-        #         return Response({'error': 'User instance not found'}, status=status.HTTP_404_NOT_FOUND)
-        # else:
-        #     return Response({'detail': 'Authentication credentials were not provided.'}, status=status.HTTP_401_UNAUTHORIZED)
+     
     
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
@@ -51,13 +41,14 @@ class LogoutView(APIView):
     
 @api_view(['GET'])
 def category_list(request):
-
+    permission_classes = [IsAuthenticated]
     if request.method == 'GET':
         categories = Category.objects.all()
         serializer = CategorySerializer(categories, many = True)
         return Response( serializer.data, status=status.HTTP_200_OK)
 
 class ProductView(APIView):
+    permission_classes = [IsAuthenticated]
     def get(self, request):
         products = Product.objects.all()
         serializer = ProductSerializer(products, many=True)
@@ -99,6 +90,7 @@ class AddToCartView(APIView):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
   
 class MyCartView(APIView):
+    permission_classes = [IsAuthenticated]
     
     def get(self, request,):
         context = {}        
@@ -109,8 +101,24 @@ class MyCartView(APIView):
         else:
             cart = None        
         return Response(serializer.data, status=status.HTTP_200_OK)
+class CartProductListView(APIView):
+    def get(self, request):
         
+        cart_id = request.session.get('cart_id')
+
+        if not cart_id:
+            
+            return Response({'detail': 'Cart not found in session.'}, status=status.HTTP_404_NOT_FOUND)
+
+        
+        cart_products = CartProduct.objects.filter(cart__id=cart_id)
+        
+        
+        serializer = CartProductSerializer(cart_products, many=True)
+
+        return Response(serializer.data, status=status.HTTP_200_OK)  
 class ManageCartAPIView(APIView):
+    permission_classes = [IsAuthenticated]
     def get(self, request, *args, **kwargs):
         cp_id = kwargs["cp_id"]
         action = request.GET.get("action")
@@ -137,5 +145,14 @@ class ManageCartAPIView(APIView):
             cp_obj.delete()
         else:
             pass
-
         return Response({"detail": "Action completed"}, status=status.HTTP_200_OK)
+
+class EmptyCartView( APIView):
+    def get(self, request, *args, **kwargs):
+         cart_id = request.session.get("cart_id", None)
+         if cart_id:
+             cart = Cart.objects.get(id=cart_id)
+             cart.cartproduct_set.all().delete()
+             cart.total = 0
+             cart.save()
+         return Response({"detail": "Cart cleared"}, status=status.HTTP_204_NO_CONTENT)
